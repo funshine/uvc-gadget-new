@@ -244,7 +244,7 @@ void v4l2_stream_on(struct processing *processing)
             }
 
             v4l2->mem[i].length = v4l2->mem[i].buf.length;
-            printf("V4L2: Buffer %u mapped at address %p, length %d.\n", i, v4l2->mem[i].start,
+            printf("V4L2: Buffer %u mapped at address %p, length %ld.\n", i, v4l2->mem[i].start,
                    v4l2->mem[i].length);
         }
         printf("V4L2: %u buffers allocated.\n", req.count);
