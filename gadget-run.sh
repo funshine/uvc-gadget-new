@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 GADGET_NAME="pi_gadget"
 SERIAL_NUMBER="100000000d2386db"

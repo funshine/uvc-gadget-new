@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 IMAGE_WIDTH=1920
 IMAGE_HEIGHT=1080
