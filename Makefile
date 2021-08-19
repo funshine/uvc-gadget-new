@@ -1,8 +1,8 @@
 CROSS_COMPILE	?= 
 
 CC			?= $(CROSS_COMPILE)gcc
-CFLAGS		:= -W -Wall -g -O3
-LDFLAGS		:= -g
+CFLAGS		?= -W -Wall -g -O3
+LDFLAGS		?= -g
 
 OBJFILES = src/configfs.o                   \
 			src/processing.o                \
