@@ -462,5 +462,5 @@ case "$1" in
         ;;
 
     *)
-        echo "Usage : $0 {start|stop} <function>"
+        echo "Usage : $0 {start|stop|rebind|unbind} <function>"
 esac
