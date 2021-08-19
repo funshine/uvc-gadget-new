@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 /usr/bin/v4l2-ctl -c auto_exposure=0
 /usr/bin/v4l2-ctl -c auto_exposure_bias=8
