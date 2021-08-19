@@ -445,6 +445,22 @@ case "$1" in
         #modprobe -r libcomposite
         #echo "OK"
         ;;
+
+    rebind)
+        echo "Binding USB Device Controller"
+        # echo $UDC > UDC
+        bind_udc
+        echo peripheral > $UDC_ROLE
+        cat $UDC_ROLE
+        echo "OK"
+        ;;
+
+    unbind)
+        echo "Unbinding USB Device Controller"
+        grep $UDC UDC && echo "" > UDC
+        echo "OK"
+        ;;
+
     *)
-        echo "Usage : $0 {start|stop}"
+        echo "Usage : $0 {start|stop} <function>"
 esac
