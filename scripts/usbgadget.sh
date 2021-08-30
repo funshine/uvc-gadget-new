@@ -341,7 +341,7 @@ case "$1" in
         echo "Creating Config"
         mkdir configs/c.1
         mkdir configs/c.1/strings/0x409
-        echo 500   > configs/c.1/MaxPower
+        # echo 500   > configs/c.1/MaxPower
         echo "UVC" > configs/c.1/strings/0x409/configuration
 
         echo "Creating functions..."
