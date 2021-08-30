@@ -18,6 +18,7 @@ bool show_fps = false;
 bool debug = false;
 bool streaming_status_onboard = false;
 bool autodetect_uvc_device = false;
+bool ignore_camera_controls = false;
 const char *fb_device_name;
 const char *uvc_device_name;
 const char *v4l2_device_name;
@@ -29,6 +30,34 @@ char *streaming_status_pin;
 int blink_on_startup = 0;
 int fb_framerate = 60;
 int nbufs = 2;
+
+static bool terminate = false;
+static bool stopped = false;
+
+void onSignal(int signum)
+{
+    switch (signum)
+    {
+    case SIGTERM:
+    case SIGINT:
+        printf("\nSIGNAL: Signal %s\n", (signum == SIGTERM) ? "TERMINATE" : "INTERRUPT");
+        terminate = true;
+        break;
+
+    case SIGUSR1:
+        printf("\nSIGNAL: Signal USER-DEFINED 1, STOP STREAMING%s\n", (stopped) ? " - Already stopped" : "");
+        stopped = true;
+        break;
+
+    case SIGUSR2:
+        printf("\nSIGNAL: Signal USER-DEFINED 2, RESUME STREAMING%s\n", (!stopped) ? " - Already running" : "");
+        stopped = false;
+        break;
+
+    default:
+        break;
+    }
+}
 
 void cleanup()
 {
@@ -45,7 +74,15 @@ int init()
 {
     const char *uvc_device;
 
+    signal(SIGTERM, onSignal);
+    signal(SIGINT, onSignal);
+    signal(SIGUSR1, onSignal);
+    signal(SIGUSR2, onSignal);
+
     memset(&processing, 0, sizeof(struct processing));
+
+    processing.events.terminate = &terminate;
+    processing.events.stopped = &stopped;
 
     processing.source.type = ENDPOINT_NONE;
     processing.target.type = ENDPOINT_NONE;
@@ -59,10 +96,11 @@ int init()
     processing.settings.streaming_status_pin = streaming_status_pin;
     processing.settings.streaming_status_onboard = streaming_status_onboard;
     processing.settings.frame_interval = (1000 / fb_framerate);
+    processing.settings.ignore_camera_controls = ignore_camera_controls;
 
     printf("UVC-GADGET: Initialization\n");
 
-    if (configfs_init(&processing, "/sys/kernel/config/usb_gadget") != 1)
+    if (configfs_init(&processing) != 1)
     {
         goto err;
     }
@@ -132,7 +170,7 @@ static void usage(const char *argv0)
     fprintf(stderr, " -d          Enable debug messages\n");
     fprintf(stderr, " -f device   Framebuffer device\n");
     fprintf(stderr, " -h          Print this help screen and exit\n");
-    fprintf(stderr, " -i image    MJPEG/YUYV image\n");
+    fprintf(stderr, " -i path     Path to MJPEG/YUYV image\n");
     fprintf(stderr, " -l          Use onboard led0 for streaming status indication\n");
     fprintf(stderr, " -m value    STDIN stream dimension (WIDTHxHEIGHT like 800x600)\n");
     fprintf(stderr, " -n value    Number of Video buffers (b/w 2 and 32)\n");
@@ -142,13 +180,14 @@ static void usage(const char *argv0)
     fprintf(stderr, " -u device   UVC Video Output device\n");
     fprintf(stderr, " -v device   V4L2 Video Capture device\n");
     fprintf(stderr, " -x          Show fps information\n");
+    fprintf(stderr, " -z          Ignore camera controls\n");
 }
 
 int main(int argc, char *argv[])
 {
     int opt;
 
-    while ((opt = getopt(argc, argv, "adhlb:f:i:m:n:p:r:s:u:v:x")) != -1)
+    while ((opt = getopt(argc, argv, "adhlb:f:i:m:n:p:r:s:u:v:xz")) != -1)
     {
         switch (opt)
         {
@@ -241,6 +280,10 @@ int main(int argc, char *argv[])
 
         case 'x':
             show_fps = true;
+            break;
+
+        case 'z':
+            ignore_camera_controls = true;
             break;
 
         default:

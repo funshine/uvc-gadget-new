@@ -15,6 +15,7 @@
 #include <time.h>
 #include <ftw.h>
 #include <dirent.h>
+#include <ctype.h>
 
 #include <sys/ioctl.h>
 #include <sys/inotify.h>
@@ -211,6 +212,8 @@ struct endpoint_stdin
     unsigned int stdin_format;
     unsigned int width;
     unsigned int height;
+    unsigned int buffer_size;
+    bool fill_buffer;
     struct stdin_buffer *buffer_use;
     struct stdin_buffer *buffer_fill;
     struct stdin_buffer *buffers;
@@ -282,6 +285,9 @@ struct events
     struct frame_format *apply_frame_format;
     struct control_mapping_pair *control;
     bool apply_control;
+    bool get_next_frame;
+    bool *terminate;
+    bool *stopped;
 };
 
 // CONFIGFS
@@ -294,6 +300,8 @@ struct streaming
 
 struct configfs
 {
+    char mount_point[255];
+    bool mount_point_found;
     struct streaming streaming;
     struct frame_format frame_format[30];
     unsigned int frame_format_size;
@@ -307,10 +315,11 @@ struct settings
     bool streaming_status_onboard;
     bool streaming_status_onboard_enabled;
     bool streaming_status_enabled;
-    char *streaming_status_pin;
-    unsigned int blink_on_startup;
-    int frame_interval;
     bool uvc_buffer_required;
+    bool ignore_camera_controls;
+    char *streaming_status_pin;
+    int frame_interval;
+    unsigned int blink_on_startup;
     unsigned int uvc_buffer_size;
 };
 
@@ -332,13 +341,42 @@ struct processing
     struct settings settings;
     struct internals internals;
     struct uvc_request uvc_request;
-
-    bool *terminate;
 };
 
 // RGB to YUYV
 
-struct px {
+struct px24 {
+    uint8_t ignore1 : 1;
+    uint8_t r : 7;
+    uint8_t ignore2 : 1;
+    uint8_t g : 7;
+    uint8_t ignore3 : 1;
+    uint8_t b : 7;
+};
+
+struct py24 {
+    uint8_t ignore1 : 2;
+    uint8_t r : 6;
+    uint8_t ignore2 : 1;
+    uint8_t g : 7;
+    uint8_t ignore3 : 3;
+    uint8_t b : 5;
+};
+
+struct rgb_pixel24 {
+    union {
+        struct px24 x1;
+        struct py24 y1;
+        unsigned int rgba1;
+    };
+    union {
+        struct px24 x2;
+        struct py24 y2;
+        unsigned int rgba2;
+    };
+};
+
+struct px32 {
     uint8_t ignore1 : 1;
     uint8_t r : 7;
     uint8_t ignore2 : 1;
@@ -348,7 +386,7 @@ struct px {
     uint8_t a;
 };
 
-struct py {
+struct py32 {
     uint8_t ignore1 : 2;
     uint8_t r : 6;
     uint8_t ignore2 : 1;
@@ -358,15 +396,15 @@ struct py {
     uint8_t a;
 };
 
-struct rgb_pixel {
+struct rgb_pixel32 {
     union {
-        struct px x1;
-        struct py y1;
+        struct px32 x1;
+        struct py32 y1;
         unsigned int rgba1;
     };
     union {
-        struct px x2;
-        struct py y2;
+        struct px32 x2;
+        struct py32 y2;
         unsigned int rgba2;
     };
 };

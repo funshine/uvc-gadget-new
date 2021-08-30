@@ -6,25 +6,8 @@
 #include "processing_stdin_uvc.h"
 #include "processing_actions.h"
 
-static bool terminate = 0;
-
-void term(int signum)
-{
-    printf("\nTERMINATE: Signal %s\n", (signum == SIGTERM) ? "SIGTERM" : "SIGINT");
-    terminate = true;
-}
-
 void processing_loop(struct processing *processing)
 {
-    struct sigaction action;
-    memset(&action, 0, sizeof(struct sigaction));
-
-    action.sa_handler = term;
-    sigaction(SIGTERM, &action, NULL);
-    sigaction(SIGINT, &action, NULL);
-
-    processing->terminate = &terminate;
-
     if (processing->target.type == ENDPOINT_UVC)
     {
         switch (processing->source.type)
