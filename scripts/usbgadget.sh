@@ -102,9 +102,11 @@ create_frame() {
     echo $HEIGHT > $wdir/wHeight
     echo $(( $WIDTH * $HEIGHT * 2 )) > $wdir/dwMaxVideoFrameBufferSize
     cat <<EOF > $wdir/dwFrameInterval
+100000
+333333
 666666
 1000000
-5000000
+2000000
 EOF
 }
 
@@ -139,8 +141,11 @@ create_uvc() {
 
     # Set the packet size: uvc gadget max size is 3k...
     # echo 3072 > functions/$FUNCTION/streaming_maxpacket
-    echo 2048 > functions/$FUNCTION/streaming_maxpacket
-    # echo 1024 > functions/$FUNCTION/streaming_maxpacket
+    # echo 2048 > functions/$FUNCTION/streaming_maxpacket
+    echo 1024 > functions/$FUNCTION/streaming_maxpacket
+
+    echo 15 > functions/$FUNCTION/streaming_maxburst
+	echo 2 > functions/$FUNCTION/streaming_interval
 
     ln -s functions/$FUNCTION $CONFIG
 
@@ -341,6 +346,13 @@ case "$1" in
         echo "Creating Config"
         mkdir configs/c.1
         mkdir configs/c.1/strings/0x409
+        # * bmAttributes is a bitmap field:
+        #   * bit 7 (MSB) is reserved in USB 2.0 and set to 1
+        #   * bit 6 set means the device is self-powered
+        #   * bit 5 set means the device can wake the host from suspend
+        #   * bits 4..0 are reserved and set to 0
+        echo 0xC0   > configs/c.1/bmAttributes
+        # * MaxPower is the max current the device will draw (in mA)
         # echo 500   > configs/c.1/MaxPower
         echo "UVC" > configs/c.1/strings/0x409/configuration
 
