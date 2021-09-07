@@ -160,6 +160,8 @@ static void v4l2_get_available_formats(struct endpoint_v4l2 *v4l2)
     memset(&fmtdesc, 0, sizeof(struct v4l2_fmtdesc));
     memset(&frmsize, 0, sizeof(struct v4l2_frmsizeenum));
 
+    v4l2->jpeg_format_available = false;
+
     fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     while (ioctl(v4l2->fd, VIDIOC_ENUM_FMT, &fmtdesc) == 0)
@@ -169,6 +171,11 @@ static void v4l2_get_available_formats(struct endpoint_v4l2 *v4l2)
         frmsize.index = 0;
         while (ioctl(v4l2->fd, VIDIOC_ENUM_FRAMESIZES, &frmsize) >= 0)
         {
+            if (fmtdesc.pixelformat == V4L2_PIX_FMT_JPEG)
+            {
+                v4l2->jpeg_format_available = true;
+            }
+
             if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE)
             {
                 printf("V4L2: Highest frame size: %c%c%c%c %ux%u\n",
@@ -332,15 +339,27 @@ void v4l2_apply_format(struct processing *processing)
     struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;
     struct events *events = &processing->events;
     struct v4l2_format fmt;
+    int video_format;
 
     if (processing->source.type == ENDPOINT_V4L2 && events->apply_frame_format)
     {
+        if (v4l2->jpeg_format_available &&
+            v4l2->jpeg_format_use &&
+            events->apply_frame_format->video_format == V4L2_PIX_FMT_MJPEG)
+        {
+            video_format = V4L2_PIX_FMT_JPEG;
+        }
+        else
+        {
+            video_format = events->apply_frame_format->video_format;
+        }
+
         memset(&fmt, 0, sizeof(struct v4l2_format));
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         fmt.fmt.pix.field = V4L2_FIELD_ANY;
         fmt.fmt.pix.width = events->apply_frame_format->wWidth;
         fmt.fmt.pix.height = events->apply_frame_format->wHeight;
-        fmt.fmt.pix.pixelformat = events->apply_frame_format->video_format;
+        fmt.fmt.pix.pixelformat = video_format;
         fmt.fmt.pix.sizeimage = fmt.fmt.pix.width * fmt.fmt.pix.height *
                                 ((fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) ? 2 : 1);
 
@@ -382,7 +401,8 @@ void v4l2_close(struct processing *processing)
 
 void v4l2_init(struct processing *processing,
                const char *device_name,
-               unsigned int nbufs)
+               unsigned int nbufs,
+               bool jpeg_format_use)
 {
     struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;
     struct settings *settings = &processing->settings;
@@ -424,6 +444,7 @@ void v4l2_init(struct processing *processing,
         print_v4l2_capabilities("V4L2", cap.capabilities);
 
         v4l2->nbufs = nbufs;
+        v4l2->jpeg_format_use = jpeg_format_use;
         processing->source.type = ENDPOINT_V4L2;
         processing->source.state = true;
 
@@ -432,6 +453,19 @@ void v4l2_init(struct processing *processing,
             v4l2_get_controls(processing);
         }
         v4l2_get_available_formats(v4l2);
+
+        if (v4l2->jpeg_format_use)
+        {
+            if (v4l2->jpeg_format_available)
+            {
+                printf("V4L2: JPEG format required and available\n");
+            }
+            else
+            {
+                printf("V4L2: WARNING: JPEG format required but NOT available\n");
+            }
+        }
+
         return;
     }
 

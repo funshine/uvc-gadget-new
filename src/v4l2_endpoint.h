@@ -8,7 +8,8 @@ void v4l2_close(struct processing *processing);
 
 void v4l2_init(struct processing *processing,
                const char *device_name,
-               unsigned int nbufs);
+               unsigned int nbufs,
+               bool jpeg_format_use);
 
 void v4l2_stream_on(struct processing *processing);
 

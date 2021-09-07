@@ -12,6 +12,7 @@
 #include "uvc_control.h"
 #include "uvc_device_detect.h"
 #include "system.h"
+#include "data_buffers.h"
 
 struct processing processing;
 bool show_fps = false;
@@ -19,6 +20,7 @@ bool debug = false;
 bool streaming_status_onboard = false;
 bool autodetect_uvc_device = false;
 bool ignore_camera_controls = false;
+bool jpeg_format_use = false;
 const char *fb_device_name;
 const char *uvc_device_name;
 const char *v4l2_device_name;
@@ -28,7 +30,7 @@ unsigned int stdin_width;
 unsigned int stdin_height;
 char *streaming_status_pin;
 int blink_on_startup = 0;
-int fb_framerate = 60;
+int framerate = 30;
 int nbufs = 2;
 
 static bool terminate = false;
@@ -65,7 +67,7 @@ void cleanup()
     image_close(&processing);
     v4l2_close(&processing);
     uvc_close(&processing);
-    stdin_buffer_free(&processing);
+    buffers_free(&processing);
 
     printf("UVC-GADGET: Exit\n");
 }
@@ -95,7 +97,7 @@ int init()
     processing.settings.blink_on_startup = blink_on_startup;
     processing.settings.streaming_status_pin = streaming_status_pin;
     processing.settings.streaming_status_onboard = streaming_status_onboard;
-    processing.settings.frame_interval = (1000 / fb_framerate);
+    processing.settings.frame_interval = (1000 / framerate);
     processing.settings.ignore_camera_controls = ignore_camera_controls;
 
     printf("UVC-GADGET: Initialization\n");
@@ -105,7 +107,7 @@ int init()
         goto err;
     }
 
-    v4l2_init(&processing, v4l2_device_name, nbufs);
+    v4l2_init(&processing, v4l2_device_name, nbufs, jpeg_format_use);
     fb_init(&processing, fb_device_name);
     image_init(&processing, image_path);
     stdin_init(&processing, stdin_format, stdin_width, stdin_height);
@@ -175,7 +177,7 @@ static void usage(const char *argv0)
     fprintf(stderr, " -m value    STDIN stream dimension (WIDTHxHEIGHT like 800x600)\n");
     fprintf(stderr, " -n value    Number of Video buffers (b/w 2 and 32)\n");
     fprintf(stderr, " -p value    GPIO pin number for streaming status indication\n");
-    fprintf(stderr, " -r value    Framerate for framebuffer (b/w 1 and 60)\n");
+    fprintf(stderr, " -r value    Framerate for framebuffer (b/w 1 and 200)\n");
     fprintf(stderr, " -s value    STDIN stream type (MJPEG/YUYV)\n");
     fprintf(stderr, " -u device   UVC Video Output device\n");
     fprintf(stderr, " -v device   V4L2 Video Capture device\n");
@@ -187,7 +189,7 @@ int main(int argc, char *argv[])
 {
     int opt;
 
-    while ((opt = getopt(argc, argv, "adhlb:f:i:m:n:p:r:s:u:v:xz")) != -1)
+    while ((opt = getopt(argc, argv, "adhlb:f:i:jm:n:p:r:s:u:v:xz")) != -1)
     {
         switch (opt)
         {
@@ -220,6 +222,10 @@ int main(int argc, char *argv[])
             image_path = optarg;
             break;
 
+        case 'j':
+            jpeg_format_use = true;
+            break;
+
         case 'l':
             streaming_status_onboard = true;
             break;
@@ -246,12 +252,12 @@ int main(int argc, char *argv[])
             break;
 
         case 'r':
-            if (atoi(optarg) < 1 || atoi(optarg) > 60)
+            if (atoi(optarg) < 1 || atoi(optarg) > 200)
             {
                 fprintf(stderr, "ERROR: Framerate value out of range\n");
                 goto err;
             }
-            fb_framerate = atoi(optarg);
+            framerate = atoi(optarg);
             break;
 
         case 's':

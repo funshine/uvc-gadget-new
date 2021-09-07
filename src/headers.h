@@ -95,12 +95,20 @@ struct buffer
     size_t length;
 };
 
-struct stdin_buffer {
+struct data_buffer {
     void *start;
     size_t length;
     unsigned int bytesused;
     unsigned int index;
     bool filled;
+};
+
+struct data_buffers {
+    unsigned int buffer_size;
+    bool fill_buffer;
+    struct data_buffer *buffer_use;
+    struct data_buffer *buffer_fill;
+    struct data_buffer *buffers;
 };
 
 enum endpoint_type
@@ -163,6 +171,8 @@ struct endpoint_v4l2
     unsigned int nbufs;
     unsigned long long int dqbuf_count;
     unsigned long long int qbuf_count;
+    bool jpeg_format_use;
+    bool jpeg_format_available;
 };
 
 struct endpoint_fb
@@ -202,8 +212,6 @@ struct endpoint_uvc
 struct endpoint_image
 {
     const char *image_path;
-    unsigned int size;
-    void *data;
     int inotify_fd;
 };
 
@@ -212,11 +220,6 @@ struct endpoint_stdin
     unsigned int stdin_format;
     unsigned int width;
     unsigned int height;
-    unsigned int buffer_size;
-    bool fill_buffer;
-    struct stdin_buffer *buffer_use;
-    struct stdin_buffer *buffer_fill;
-    struct stdin_buffer *buffers;
 };
 
 struct endpoint
@@ -341,6 +344,7 @@ struct processing
     struct settings settings;
     struct internals internals;
     struct uvc_request uvc_request;
+    struct data_buffers data_buffers;
 };
 
 // RGB to YUYV

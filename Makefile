@@ -5,6 +5,7 @@ CFLAGS		?= -W -Wall -g -O3
 LDFLAGS		?= -g
 
 OBJFILES = src/configfs.o                   \
+			src/data_buffers.o              \
 			src/processing.o                \
 			src/v4l2_endpoint.o             \
 			src/fb_endpoint.o               \

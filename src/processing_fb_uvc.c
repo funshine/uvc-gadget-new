@@ -145,7 +145,8 @@ void processing_loop_fb_uvc(struct processing *processing)
     int activity;
     double next_frame_time = 0;
     double now;
-    double sleep_time;
+    double diff_time;
+    long sleep_time;
     fd_set fdsu;
 
     printf("PROCESSING: FB %s -> UVC %s\n", fb->device_name, uvc->device_name);
@@ -159,13 +160,17 @@ void processing_loop_fb_uvc(struct processing *processing)
         fd_set dfds = fdsu;
 
         now = processing_now();
-        sleep_time = next_frame_time - now;
-        if (sleep_time < 3)
-        {
-            sleep_time = 3;
-        }
+        diff_time = (next_frame_time - now);
 
-        nanosleep((const struct timespec[]){{0, 1000000L * (sleep_time - 2)}}, NULL);
+        if (diff_time > 0)
+        {
+            sleep_time = (long)(diff_time * 0.8);
+            if (sleep_time > 5)
+            {
+                sleep_time = 5;
+            }
+            nanosleep((const struct timespec[]){{0, sleep_time * 1000000L}}, NULL);
+        }
 
         activity = select(uvc->fd + 1, NULL, &dfds, &efds, NULL);
 
@@ -192,14 +197,11 @@ void processing_loop_fb_uvc(struct processing *processing)
 
         if (FD_ISSET(uvc->fd, &dfds))
         {
-            if (!*(events->stopped))
+            now = processing_now();
+            if (!*(events->stopped) && now >= next_frame_time && fb->memory)
             {
-                if (now >= next_frame_time && fb->memory)
-                {
-                    fb_uvc_video_process(processing);
-
-                    next_frame_time = now + settings->frame_interval;
-                }
+                fb_uvc_video_process(processing);
+                next_frame_time = now + settings->frame_interval;
             }
         }
 

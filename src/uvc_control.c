@@ -211,14 +211,7 @@ void uvc_fill_streaming_control(struct processing *processing,
 
     uvc_get_frame_format(processing, &frame_format, iformat, iframe);
 
-    if (frame_format->dwDefaultFrameInterval >= 100000)
-    {
-        frame_interval = frame_format->dwDefaultFrameInterval;
-    }
-    else
-    {
-        frame_interval = 400000;
-    }
+    frame_interval = frame_format->dwDefaultFrameInterval;
 
     dwMaxPayloadTransferSize = configfs->streaming.maxpacket;
     if (configfs->streaming.maxpacket > 1024 && configfs->streaming.maxpacket % 1024 != 0)

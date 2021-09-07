@@ -1,55 +1,67 @@
 
 #include "headers.h"
 #include "image_endpoint.h"
+#include "data_buffers.h"
 
 int image_load(struct processing *processing)
 {
     struct endpoint_image *image = &processing->source.image;
-    void *data;
+    struct data_buffers *data_buffers = &processing->data_buffers;
+    struct data_buffer *data_buffer = data_buffers->buffer_fill;
     int fd;
-
-    if (image->data)
-    {
-        free(image->data);
-        image->data = NULL;
-    }
+    size_t size;
+    size_t readed;
 
     fd = open(image->image_path, O_RDONLY);
     if (fd == -1)
     {
-        printf("IMAGE: Unable to open MJPEG image '%s'\n", image->image_path);
+        printf("IMAGE: Unable to open image '%s'\n", image->image_path);
         return -1;
     }
 
-    image->size = lseek(fd, 0, SEEK_END);
+    size = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
 
-    data = malloc(image->size);
-    if (data == NULL)
+    if (size <= data_buffer->length)
     {
-        printf("IMAGE: Unable to allocate memory for MJPEG image\n");
-        image->size = 0;
-        return -1;
+        readed = read(fd, data_buffer->start, size);
+        if (readed == size)
+        {
+            data_buffer->bytesused = readed;
+            buffers_swap(processing);
+        }
+        else
+        {
+            printf("IMAGE: ERROR: Unable to read image\n");
+            goto err;
+        }
+    }
+    else
+    {
+        printf("IMAGE: ERROR: Image length is higher than allocated memory\n");
+        goto err;
     }
 
-    read(fd, data, image->size);
     close(fd);
 
-    image->data = data;
-
     return 0;
+
+err:
+    if (fd)
+    {
+        close(fd);
+    }
+    return -1;
 }
 
 void image_close(struct processing *processing)
 {
     struct endpoint_image *image = &processing->source.image;
 
-    if (processing->source.type == ENDPOINT_IMAGE && image->data)
+    if (processing->source.type == ENDPOINT_IMAGE)
     {
         printf("IMAGE: Closing image\n");
         inotify_rm_watch(image->inotify_fd, IN_CLOSE_WRITE);
-        free(image->data);
-        image->data = NULL;
     }
 }
 
@@ -65,9 +77,13 @@ void image_init(struct processing *processing,
 
         image->image_path = image_path;
 
-        if (image_load(processing) < 0)
+        if (buffers_init(processing, 4147200) == -1)
         {
-            printf("IMAGE: ERROR opening image\n");
+            return;
+        }
+
+        if (image_load(processing) == -1)
+        {
             return;
         }
 

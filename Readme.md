@@ -19,6 +19,7 @@ A new version of uvc-gadget with totally rewriten source code to be more flexibl
         -f device      Framebuffer device
         -h             Print this help screen and exit
         -i path        Path to MJPEG/YUYV image
+        -j             Use JPEG format instead of MJPEG for V4L2 input device
         -l             Use onboard led0 for streaming status indication
         -m value       STDIN stream dimension (WIDTHxHEIGHT like 800x600)
         -n value       Number of Video buffers (b/w 2 and 32)
