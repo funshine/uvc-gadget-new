@@ -334,6 +334,35 @@ void v4l2_stream_off(struct processing *processing)
     }
 }
 
+void v4l2_fps_set(struct processing *processing)
+{
+    struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;
+    struct events *events = &processing->events;
+    static struct v4l2_streamparm parm;
+    int fps;
+    memset(&parm, 0, sizeof(parm));
+
+    if (processing->source.type == ENDPOINT_V4L2 && events->apply_frame_format)
+    {
+        if (events->apply_frame_format->dwDefaultFrameInterval > 0)
+        {
+            fps = (int) 10000000 / events->apply_frame_format->dwDefaultFrameInterval;
+
+            parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            parm.parm.capture.timeperframe.numerator = 1000;
+            parm.parm.capture.timeperframe.denominator =
+                (uint32_t)(fps * parm.parm.capture.timeperframe.numerator);
+
+            printf("V4L2: Setting FPS: %d\n", fps);
+
+            if (ioctl(v4l2->fd, VIDIOC_S_PARM, &parm) < 0)
+            {
+                printf("V4L2: VIDIOC_S_PARM error: %s (%d)\n", strerror(errno), errno);
+            }
+        }
+    }
+}
+
 void v4l2_apply_format(struct processing *processing)
 {
     struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;

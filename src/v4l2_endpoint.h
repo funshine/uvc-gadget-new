@@ -19,4 +19,6 @@ void v4l2_apply_format(struct processing *processing);
 
 void v4l2_set_ctrl(struct processing *processing);
 
+void v4l2_fps_set(struct processing *processing);
+
 #endif // end V4L2_ENDPOINT

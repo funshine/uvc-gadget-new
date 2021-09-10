@@ -16,4 +16,6 @@ void uvc_stream_off(struct processing *processing);
 
 void uvc_apply_format(struct processing *processing);
 
+void uvc_fps_set(struct processing *processing);
+
 #endif // end UVC_ENDPOINT

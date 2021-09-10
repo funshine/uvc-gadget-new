@@ -173,6 +173,7 @@ static void usage(const char *argv0)
     fprintf(stderr, " -f device   Framebuffer device\n");
     fprintf(stderr, " -h          Print this help screen and exit\n");
     fprintf(stderr, " -i path     Path to MJPEG/YUYV image\n");
+    fprintf(stderr, " -j          Use JPEG format instead of MJPEG for V4L2 input device\n");
     fprintf(stderr, " -l          Use onboard led0 for streaming status indication\n");
     fprintf(stderr, " -m value    STDIN stream dimension (WIDTHxHEIGHT like 800x600)\n");
     fprintf(stderr, " -n value    Number of Video buffers (b/w 2 and 32)\n");
