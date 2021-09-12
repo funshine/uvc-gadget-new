@@ -11,25 +11,26 @@ A new version of uvc-gadget with totally rewriten source code to be more flexibl
 ## How to use
 
     Usage: ./uvc-gadget [options]
-    
-    Available options are
-        -a             Find UVC device automatically
-        -b value       Blink X times on startup (b/w 1 and 20 with led0 or GPIO pin if defined)
-        -d             Enable debug messages
-        -f device      Framebuffer device
-        -h             Print this help screen and exit
-        -i path        Path to MJPEG/YUYV image
-        -j             Use JPEG format instead of MJPEG for V4L2 input device
-        -l             Use onboard led0 for streaming status indication
-        -m value       STDIN stream dimension (WIDTHxHEIGHT like 800x600)
-        -n value       Number of Video buffers (b/w 2 and 32)
-        -p value       GPIO pin number for streaming status indication
-        -r value       Framerate for framebuffer (b/w 1 and 30)
-        -s value       STDIN stream type (MJPEG/YUYV)
-        -u device      UVC Video Output device
-        -v device      V4L2 Video Capture device
-        -x             Show fps information
-        -z             Ignore camera controls
+
+    Options
+    -a, --autodetect            Find UVC device automatically
+    -b, --blink <value>         Blink X times on startup
+                                (b/w 1 and 20 with led0 or GPIO pin if defined)
+    -d, --debug                 Enable debug messages
+    -f, --framebuffer <device>  Framebuffer as input device
+    -h, --help                  Print this help screen and exit
+    -i, --image <path>          Path to MJPEG/YUYV image
+    -j, --jpeg                  Use JPEG format instead of MJPEG for V4L2 device
+    -l, --led                   Use onboard led0 for streaming status indication
+    -m, --dimensions <value>    STDIN stream dimension (WIDTHxHEIGHT like 800x600)
+    -n, --buffers <value>       Number of Video buffers (b/w 2 and 32)
+    -p, --pin <value>           GPIO pin number for streaming status indication
+    -r, --fps <value>           Framerate for framebuffer (b/w 1 and 200)
+    -s, --stdin <value>         STDIN stream type (MJPEG/YUYV)
+    -u, --uvc <device>          UVC Video Output device
+    -v, --v4l2 <device>         V4L2 Video Capture device
+    -x, --show-fps              Show fps information
+    -z, --ignore-controls       Ignore camera controls
 
 ## Examples of usage
 Devices are selected according to availability on the Raspberry Pi Zero W

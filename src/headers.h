@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +46,24 @@
     })
 
 #define pixfmtstr(x) (x) & 0xff, ((x) >> 8) & 0xff, ((x) >> 16) & 0xff, ((x) >> 24) & 0xff
+
+#define OPT_AUTODETECT 'a'
+#define OPT_BLINK 'b'
+#define OPT_DEBUG 'd'
+#define OPT_FRAMEBUFFER 'f'
+#define OPT_HELP 'h'
+#define OPT_IMAGE 'i'
+#define OPT_JPEG 'j'
+#define OPT_ONBOARD_LED 'l'
+#define OPT_DIMENSIONS 'm'
+#define OPT_BUFFERS 'n'
+#define OPT_GPIO_PIN 'p'
+#define OPT_FRAMERATE 'r'
+#define OPT_STDIN 's'
+#define OPT_UVC 'u'
+#define OPT_V4L2 'v'
+#define OPT_SHOW_FPS 'x'
+#define OPT_IGNORE_CONTROLS 'z'
 
 #define UVC_INTF_CONTROL 0
 #define UVC_INTF_STREAMING 1

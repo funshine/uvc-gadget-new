@@ -111,6 +111,7 @@ if [ -z "${USB_UDC_DRIVER}" ]; then
 
         mkdir -p "${UVC_FUNCTION_PATH}/control/header/h"
         ln -s "${UVC_FUNCTION_PATH}/control/header/h" "${UVC_FUNCTION_PATH}/control/class/fs/h"
+        ln -s "${UVC_FUNCTION_PATH}/control/header/h" "${UVC_FUNCTION_PATH}/control/class/ss/h"
 
         if [ -z "${UVC_FORMATS}" ]; then
             echo "ERROR: Missing UVC_FORMATS"
