@@ -64,6 +64,8 @@
 #define OPT_V4L2 'v'
 #define OPT_SHOW_FPS 'x'
 #define OPT_IGNORE_CONTROLS 'z'
+#define OPT_CONTROL_APPLY_ONCE 260
+#define OPT_CONTROL_APPLY_ALWAYS 261
 
 #define UVC_INTF_CONTROL 0
 #define UVC_INTF_STREAMING 1
@@ -186,6 +188,7 @@ struct endpoint_v4l2
     const char *device_name;
     int fd;
     int is_streaming;
+    int stream_on_count;
     struct buffer *mem;
     unsigned int nbufs;
     unsigned long long int dqbuf_count;
@@ -352,6 +355,30 @@ struct internals
     bool blink_state;
 };
 
+// STORED CONTROLS
+enum control_apply_type
+{
+    CONTROL_NOT_APPLY,
+    CONTROL_APPLY_ONCE,
+    CONTROL_APPLY_ALWAYS
+};
+
+struct stored_control
+{
+    char *args;
+    char *control_name;
+    char *control_value;
+    unsigned int v4l2;
+    int value;
+    enum control_apply_type apply_type;
+};
+
+struct stored_controls
+{
+    struct stored_control controls[256];
+    int length;
+};
+
 // PROCESSING
 struct processing
 {
@@ -359,6 +386,7 @@ struct processing
     struct endpoint target;
     struct configfs configfs;
     struct controls controls;
+    struct stored_controls *stored_controls;
     struct events events;
     struct settings settings;
     struct internals internals;

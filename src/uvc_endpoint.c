@@ -2,35 +2,6 @@
 #include "headers.h"
 #include "v4l2_names.h"
 
-void uvc_fps_set(struct processing *processing)
-{
-    struct endpoint_uvc *uvc = &processing->target.uvc;
-    struct events *events = &processing->events;
-    static struct v4l2_streamparm parm;
-    int fps;
-    memset(&parm, 0, sizeof(parm));
-
-    if (processing->source.type == ENDPOINT_V4L2 && events->apply_frame_format)
-    {
-        if (events->apply_frame_format->dwDefaultFrameInterval > 0)
-        {
-            fps = (int) 10000000 / events->apply_frame_format->dwDefaultFrameInterval;
-
-            parm.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-            parm.parm.capture.timeperframe.numerator = 1000;
-            parm.parm.capture.timeperframe.denominator =
-                (uint32_t)(fps * parm.parm.capture.timeperframe.numerator);
-
-            printf("UVC: Setting FPS: %d\n", fps);
-
-            if (ioctl(uvc->fd, VIDIOC_S_PARM, &parm) < 0)
-            {
-                printf("UVC: VIDIOC_S_PARM error: %s (%d)\n", strerror(errno), errno);
-            }
-        }
-    }
-}
-
 void uvc_apply_format(struct processing *processing)
 {
     struct endpoint_uvc *uvc = &processing->target.uvc;

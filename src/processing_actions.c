@@ -65,7 +65,6 @@ void processing_internals(struct processing *processing)
         v4l2_apply_format(processing);
         v4l2_fps_set(processing);
         uvc_apply_format(processing);
-        uvc_fps_set(processing);
         events->apply_frame_format = NULL;
     }
 

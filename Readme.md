@@ -13,24 +13,28 @@ A new version of uvc-gadget with totally rewriten source code to be more flexibl
     Usage: ./uvc-gadget [options]
 
     Options
-    -a, --autodetect            Find UVC device automatically
-    -b, --blink <value>         Blink X times on startup
-                                (b/w 1 and 20 with led0 or GPIO pin if defined)
-    -d, --debug                 Enable debug messages
-    -f, --framebuffer <device>  Framebuffer as input device
-    -h, --help                  Print this help screen and exit
-    -i, --image <path>          Path to MJPEG/YUYV image
-    -j, --jpeg                  Use JPEG format instead of MJPEG for V4L2 device
-    -l, --led                   Use onboard led0 for streaming status indication
-    -m, --dimensions <value>    STDIN stream dimension (WIDTHxHEIGHT like 800x600)
-    -n, --buffers <value>       Number of Video buffers (b/w 2 and 32)
-    -p, --pin <value>           GPIO pin number for streaming status indication
-    -r, --fps <value>           Framerate for framebuffer (b/w 1 and 200)
-    -s, --stdin <value>         STDIN stream type (MJPEG/YUYV)
-    -u, --uvc <device>          UVC Video Output device
-    -v, --v4l2 <device>         V4L2 Video Capture device
-    -x, --show-fps              Show fps information
-    -z, --ignore-controls       Ignore camera controls
+    -a, --autodetect                Find UVC device automatically
+    -b, --blink <value>             Blink X times on startup
+                                    (b/w 1 and 20 with led0 or GPIO pin if defined)
+    -d, --debug                     Enable debug messages
+    -f, --framebuffer <device>      Framebuffer as input device
+    -h, --help                      Print this help screen and exit
+    -i, --image <path>              Path to MJPEG/YUYV image
+    -j, --jpeg                      Use JPEG format instead of MJPEG for V4L2 device
+    -l, --led                       Use onboard led0 for streaming status indication
+    -m, --dimensions <value>        STDIN stream dimension (WIDTHxHEIGHT like 800x600)
+    -n, --buffers <value>           Number of Video buffers (b/w 2 and 32)
+    -p, --pin <value>               GPIO pin number for streaming status indication
+    -r, --fps <value>               Framerate for framebuffer (b/w 1 and 200)
+    -s, --stdin <value>             STDIN stream type (MJPEG/YUYV)
+    -u, --uvc <device>              UVC Video Output device
+    -v, --v4l2 <device>             V4L2 Video Capture device
+    -x, --show-fps                  Show fps information
+    -z, --ignore-controls           Ignore camera controls
+        --acontrol <control=value>  Apply control to V4L2 device ALWAYS when the stream starts
+                                      (example: video_bitrate=25000000)
+        --ocontrol <control=value>  Apply control to V4L2 device ONCE when the stream starts
+                                      (example: brightness=50)
 
 ## Examples of usage
 Devices are selected according to availability on the Raspberry Pi Zero W

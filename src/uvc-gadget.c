@@ -15,6 +15,7 @@
 #include "data_buffers.h"
 
 struct processing processing;
+struct stored_controls stored_controls;
 bool show_fps = false;
 bool debug = false;
 bool streaming_status_onboard = false;
@@ -55,6 +56,8 @@ struct option long_options[] =
     {"v4l2", required_argument, NULL, OPT_V4L2},
     {"show-fps", no_argument, NULL, OPT_SHOW_FPS},
     {"ignore-controls", no_argument, NULL, OPT_IGNORE_CONTROLS},
+    {"ocontrol", required_argument, NULL, OPT_CONTROL_APPLY_ONCE},
+    {"acontrol", required_argument, NULL, OPT_CONTROL_APPLY_ALWAYS},
     {0, 0, 0, 0}
 };
 
@@ -106,6 +109,8 @@ int init()
     signal(SIGUSR2, onSignal);
 
     memset(&processing, 0, sizeof(struct processing));
+
+    processing.stored_controls = &stored_controls;
 
     processing.events.terminate = &terminate;
     processing.events.stopped = &stopped;
@@ -191,30 +196,36 @@ static void usage(const char *argv0)
 {
     fprintf(stderr, "Usage: %s [options]\n", argv0);
     fprintf(stderr, "\nOptions\n");
-    fprintf(stderr, " -a, --autodetect            Find UVC device automatically\n");
-    fprintf(stderr, " -b, --blink <value>         Blink X times on startup\n");
-    fprintf(stderr, "                               (b/w 1 and 20 with led0 or GPIO pin if defined)\n");
-    fprintf(stderr, " -d, --debug                 Enable debug messages\n");
-    fprintf(stderr, " -f, --framebuffer <device>  Framebuffer as input device\n");
-    fprintf(stderr, " -h, --help                  Print this help screen and exit\n");
-    fprintf(stderr, " -i, --image <path>          Path to MJPEG/YUYV image\n");
-    fprintf(stderr, " -j, --jpeg                  Use JPEG format instead of MJPEG for V4L2 device\n");
-    fprintf(stderr, " -l, --led                   Use onboard led0 for streaming status indication\n");
-    fprintf(stderr, " -m, --dimensions <value>    STDIN stream dimension (WIDTHxHEIGHT like 800x600)\n");
-    fprintf(stderr, " -n, --buffers <value>       Number of Video buffers (b/w 2 and 32)\n");
-    fprintf(stderr, " -p, --pin <value>           GPIO pin number for streaming status indication\n");
-    fprintf(stderr, " -r, --fps <value>           Framerate for framebuffer (b/w 1 and 200)\n");
-    fprintf(stderr, " -s, --stdin <value>         STDIN stream type (MJPEG/YUYV)\n");
-    fprintf(stderr, " -u, --uvc <device>          UVC Video Output device\n");
-    fprintf(stderr, " -v, --v4l2 <device>         V4L2 Video Capture device\n");
-    fprintf(stderr, " -x, --show-fps              Show fps information\n");
-    fprintf(stderr, " -z, --ignore-controls       Ignore camera controls\n");
+    fprintf(stderr, " -a, --autodetect                Find UVC device automatically\n");
+    fprintf(stderr, " -b, --blink <value>             Blink X times on startup\n");
+    fprintf(stderr, "                                   (b/w 1 and 20 with led0 or GPIO pin if defined)\n");
+    fprintf(stderr, " -d, --debug                     Enable debug messages\n");
+    fprintf(stderr, " -f, --framebuffer <device>      Framebuffer as input device\n");
+    fprintf(stderr, " -h, --help                      Print this help screen and exit\n");
+    fprintf(stderr, " -i, --image <path>              Path to MJPEG/YUYV image\n");
+    fprintf(stderr, " -j, --jpeg                      Use JPEG format instead of MJPEG for V4L2 device\n");
+    fprintf(stderr, " -l, --led                       Use onboard led0 for streaming status indication\n");
+    fprintf(stderr, " -m, --dimensions <value>        STDIN stream dimension (WIDTHxHEIGHT like 800x600)\n");
+    fprintf(stderr, " -n, --buffers <value>           Number of Video buffers (b/w 2 and 32)\n");
+    fprintf(stderr, " -p, --pin <value>               GPIO pin number for streaming status indication\n");
+    fprintf(stderr, " -r, --fps <value>               Framerate for framebuffer (b/w 1 and 200)\n");
+    fprintf(stderr, " -s, --stdin <value>             STDIN stream type (MJPEG/YUYV)\n");
+    fprintf(stderr, " -u, --uvc <device>              UVC Video Output device\n");
+    fprintf(stderr, " -v, --v4l2 <device>             V4L2 Video Capture device\n");
+    fprintf(stderr, " -x, --show-fps                  Show fps information\n");
+    fprintf(stderr, " -z, --ignore-controls           Ignore camera controls\n");
+    fprintf(stderr, "     --acontrol <control=value>  Apply control to V4L2 device ALWAYS when the stream starts\n");
+    fprintf(stderr, "                                   (example: video_bitrate=25000000)\n");
+    fprintf(stderr, "     --ocontrol <control=value>  Apply control to V4L2 device ONCE when the stream starts\n");
+    fprintf(stderr, "                                   (example: brightness=50)\n");
 }
 
 int main(int argc, char *argv[])
 {
     int opt;
     int option_index = 0;
+
+    memset(&stored_controls, 0, sizeof(struct stored_controls));
 
     while ((opt = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1)
     {
@@ -317,6 +328,18 @@ int main(int argc, char *argv[])
 
         case 'z':
             ignore_camera_controls = true;
+            break;
+
+        case OPT_CONTROL_APPLY_ONCE:
+            stored_controls.controls[stored_controls.length].args = optarg;
+            stored_controls.controls[stored_controls.length].apply_type = CONTROL_APPLY_ONCE;
+            stored_controls.length += 1;
+            break;
+
+        case OPT_CONTROL_APPLY_ALWAYS:
+            stored_controls.controls[stored_controls.length].args = optarg;
+            stored_controls.controls[stored_controls.length].apply_type = CONTROL_APPLY_ALWAYS;
+            stored_controls.length += 1;
             break;
 
         default:

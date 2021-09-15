@@ -290,7 +290,8 @@ void configfs_get_mountpoint(struct processing *processing)
     {
         printf("CONFIGFS: Open /proc/mounts\n");
 
-        while ((read = getline(&line, &len, fp)) != -1) {
+        while ((read = getline(&line, &len, fp)) != -1)
+        {
             ptr = strtok(trim(line), " \t");
             if (ptr == NULL)
             {
