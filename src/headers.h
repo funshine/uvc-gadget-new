@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +46,26 @@
     })
 
 #define pixfmtstr(x) (x) & 0xff, ((x) >> 8) & 0xff, ((x) >> 16) & 0xff, ((x) >> 24) & 0xff
+
+#define OPT_AUTODETECT 'a'
+#define OPT_BLINK 'b'
+#define OPT_DEBUG 'd'
+#define OPT_FRAMEBUFFER 'f'
+#define OPT_HELP 'h'
+#define OPT_IMAGE 'i'
+#define OPT_JPEG 'j'
+#define OPT_ONBOARD_LED 'l'
+#define OPT_DIMENSIONS 'm'
+#define OPT_BUFFERS 'n'
+#define OPT_GPIO_PIN 'p'
+#define OPT_FRAMERATE 'r'
+#define OPT_STDIN 's'
+#define OPT_UVC 'u'
+#define OPT_V4L2 'v'
+#define OPT_SHOW_FPS 'x'
+#define OPT_IGNORE_CONTROLS 'z'
+#define OPT_CONTROL_APPLY_ONCE 260
+#define OPT_CONTROL_APPLY_ALWAYS 261
 
 #define UVC_INTF_CONTROL 0
 #define UVC_INTF_STREAMING 1
@@ -95,12 +116,20 @@ struct buffer
     size_t length;
 };
 
-struct stdin_buffer {
+struct data_buffer {
     void *start;
     size_t length;
     unsigned int bytesused;
     unsigned int index;
     bool filled;
+};
+
+struct data_buffers {
+    unsigned int buffer_size;
+    bool fill_buffer;
+    struct data_buffer *buffer_use;
+    struct data_buffer *buffer_fill;
+    struct data_buffer *buffers;
 };
 
 enum endpoint_type
@@ -159,10 +188,13 @@ struct endpoint_v4l2
     const char *device_name;
     int fd;
     int is_streaming;
+    int stream_on_count;
     struct buffer *mem;
     unsigned int nbufs;
     unsigned long long int dqbuf_count;
     unsigned long long int qbuf_count;
+    bool jpeg_format_use;
+    bool jpeg_format_available;
 };
 
 struct endpoint_fb
@@ -202,8 +234,6 @@ struct endpoint_uvc
 struct endpoint_image
 {
     const char *image_path;
-    unsigned int size;
-    void *data;
     int inotify_fd;
 };
 
@@ -212,11 +242,6 @@ struct endpoint_stdin
     unsigned int stdin_format;
     unsigned int width;
     unsigned int height;
-    unsigned int buffer_size;
-    bool fill_buffer;
-    struct stdin_buffer *buffer_use;
-    struct stdin_buffer *buffer_fill;
-    struct stdin_buffer *buffers;
 };
 
 struct endpoint
@@ -330,6 +355,30 @@ struct internals
     bool blink_state;
 };
 
+// STORED CONTROLS
+enum control_apply_type
+{
+    CONTROL_NOT_APPLY,
+    CONTROL_APPLY_ONCE,
+    CONTROL_APPLY_ALWAYS
+};
+
+struct stored_control
+{
+    char *args;
+    char *control_name;
+    char *control_value;
+    unsigned int v4l2;
+    int value;
+    enum control_apply_type apply_type;
+};
+
+struct stored_controls
+{
+    struct stored_control controls[256];
+    int length;
+};
+
 // PROCESSING
 struct processing
 {
@@ -337,10 +386,12 @@ struct processing
     struct endpoint target;
     struct configfs configfs;
     struct controls controls;
+    struct stored_controls *stored_controls;
     struct events events;
     struct settings settings;
     struct internals internals;
     struct uvc_request uvc_request;
+    struct data_buffers data_buffers;
 };
 
 // RGB to YUYV

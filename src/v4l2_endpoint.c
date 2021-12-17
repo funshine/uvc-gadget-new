@@ -13,7 +13,7 @@ static void v4l2_set_ctrl_value(struct processing *processing,
     struct v4l2_queryctrl queryctrl;
     struct v4l2_control control;
     memset(&queryctrl, 0, sizeof(struct v4l2_queryctrl));
-    char *control_name = v4l2_control_name(ctrl->v4l2);
+    char *control_name = v4l2_control_name(ctrl_v4l2);
 
     queryctrl.id = ctrl_v4l2;
     if (ioctl(v4l2->fd, VIDIOC_QUERYCTRL, &queryctrl) == -1)
@@ -36,7 +36,7 @@ static void v4l2_set_ctrl_value(struct processing *processing,
     else
     {
         memset(&control, 0, sizeof(struct v4l2_control));
-        control.id = ctrl->v4l2;
+        control.id = ctrl_v4l2;
         control.value = v4l2_ctrl_value;
 
         if (ioctl(v4l2->fd, VIDIOC_S_CTRL, &control) == -1)
@@ -45,8 +45,16 @@ static void v4l2_set_ctrl_value(struct processing *processing,
                    control_name, strerror(errno), errno);
             return;
         }
-        printf("V4L2: %s changed value (V4L2: %d, UVC: %d)\n",
-               control_name, v4l2_ctrl_value, ctrl->value);
+        if (ctrl != NULL)
+        {
+            printf("V4L2: %s changed value (V4L2: %d, UVC: %d)\n",
+                   control_name, v4l2_ctrl_value, ctrl->value);
+        }
+        else
+        {
+            printf("V4L2: %s changed value (V4L2: %d)\n",
+                   control_name, v4l2_ctrl_value);
+        }
     }
 }
 
@@ -119,6 +127,134 @@ static void v4l2_prepare_camera_control(struct processing *processing,
     controls->size += 1;
 }
 
+void v4l2_apply_stored_controls(struct processing *processing)
+{
+    struct stored_controls *stored_controls = processing->stored_controls;
+    struct stored_control *stored_control;
+    struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;
+    int i;
+
+    for (i = 0; i < stored_controls->length; i++)
+    {
+        stored_control = &stored_controls->controls[i];
+        if (!stored_control->v4l2) {
+            continue;
+        }
+        if ((stored_control->apply_type == CONTROL_APPLY_ONCE && v4l2->stream_on_count == 1) ||
+            stored_control->apply_type == CONTROL_APPLY_ALWAYS)
+        {
+            printf("V4L2: Apply stored control: name: %s, apply: %s\n",
+                   stored_control->control_name,
+                   (stored_control->apply_type == CONTROL_APPLY_ONCE) ? "ONCE" : "ALWAYS");
+            v4l2_set_ctrl_value(processing, NULL, stored_control->v4l2,  stored_control->value);
+        }
+    }
+}
+
+void v4l2_parse_stored_controls(struct processing *processing)
+{
+    struct stored_controls *stored_controls = processing->stored_controls;
+    struct stored_control *stored_control;
+    int i;
+    int value;
+    char *ptr_name;
+    char *ptr_value;
+
+    for (i = 0; i < stored_controls->length; i++)
+    {
+        stored_control = &stored_controls->controls[i];
+        printf("V4L2: Parsing of control: %s\n", stored_control->args);
+        ptr_name = strtok(stored_control->args, "=");
+
+        if (ptr_name != NULL)
+        {
+            ptr_value = strtok(NULL, "=");
+            if (ptr_value != NULL)
+            {
+                sscanf(ptr_value, "%d", &value);
+                stored_control->control_name = ptr_name;
+                stored_control->control_value = ptr_value;
+                stored_control->value = value;
+
+                printf("V4L2: Control parsed: name: %s, value: %d, apply: %s\n",
+                       stored_control->control_name,
+                       stored_control->value,
+                       (stored_control->apply_type == CONTROL_APPLY_ONCE) ? "ONCE" : "ALWAYS");
+            }
+            else
+            {
+                printf("V4L2: ERROR: Control parsed: value not found\n");
+            }
+        }
+        else
+        {
+            printf("V4L2: ERROR: Control parsed: delimiter '=' not found\n");
+        }
+    }
+}
+
+int v4l2_check_control_name(char *name, char *check_name)
+{
+    int i;
+    int len_name = strlen(name) - 1;
+    char lowercase;
+    char out_name[127] = {'\0'};
+    bool add_underscore = false;
+
+    for (i = 0; i <= len_name; i++)
+    {
+        if (isalnum(name[i]))
+        {
+            if (add_underscore)
+            {
+                strcat(out_name, "_");
+                add_underscore = false;
+            }
+            lowercase = tolower(name[i]);
+            strncat(out_name, &lowercase, 1);
+        }
+        else
+        {
+            add_underscore = true;
+        }
+    }
+    return strcmp(out_name, check_name);
+}
+
+void v4l2_init_stored_controls(struct processing *processing)
+{
+    struct stored_controls *stored_controls = processing->stored_controls;
+    struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;
+    struct v4l2_queryctrl queryctrl;
+    int i;
+
+    const unsigned next_fl = V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND;
+
+    if (stored_controls->length == 0) {
+        return;
+    }
+
+    memset(&queryctrl, 0, sizeof(struct v4l2_queryctrl));
+
+    queryctrl.id = next_fl;
+    while (ioctl(v4l2->fd, VIDIOC_QUERYCTRL, &queryctrl) == 0)
+    {
+        for (i = 0; i < stored_controls->length; i++)
+        {
+            if (v4l2_check_control_name((char *)queryctrl.name, (char *)stored_controls->controls[i].control_name) == 0)
+            {
+                printf ("V4L2: Found V4L2 control for stored control %s = %s (%s)\n",
+                        stored_controls->controls[i].control_name,
+                        queryctrl.name,
+                        v4l2_control_name(queryctrl.id));
+                stored_controls->controls[i].v4l2 = queryctrl.id;
+                break;
+            }
+        }
+        queryctrl.id |= next_fl;
+    }
+}
+
 void v4l2_get_controls(struct processing *processing)
 {
     struct controls *controls = &processing->controls;
@@ -160,6 +296,8 @@ static void v4l2_get_available_formats(struct endpoint_v4l2 *v4l2)
     memset(&fmtdesc, 0, sizeof(struct v4l2_fmtdesc));
     memset(&frmsize, 0, sizeof(struct v4l2_frmsizeenum));
 
+    v4l2->jpeg_format_available = false;
+
     fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     while (ioctl(v4l2->fd, VIDIOC_ENUM_FMT, &fmtdesc) == 0)
@@ -169,6 +307,11 @@ static void v4l2_get_available_formats(struct endpoint_v4l2 *v4l2)
         frmsize.index = 0;
         while (ioctl(v4l2->fd, VIDIOC_ENUM_FRAMESIZES, &frmsize) >= 0)
         {
+            if (fmtdesc.pixelformat == V4L2_PIX_FMT_JPEG)
+            {
+                v4l2->jpeg_format_available = true;
+            }
+
             if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE)
             {
                 printf("V4L2: Highest frame size: %c%c%c%c %ux%u\n",
@@ -271,9 +414,10 @@ void v4l2_stream_on(struct processing *processing)
         }
 
         printf("V4L2: STREAM ON success\n");
+        v4l2->stream_on_count += 1;
         v4l2->is_streaming = 1;
 
-        return;
+        v4l2_apply_stored_controls(processing);
     }
 }
 
@@ -327,20 +471,61 @@ void v4l2_stream_off(struct processing *processing)
     }
 }
 
+void v4l2_fps_set(struct processing *processing)
+{
+    struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;
+    struct events *events = &processing->events;
+    static struct v4l2_streamparm parm;
+    int fps;
+    memset(&parm, 0, sizeof(parm));
+
+    if (processing->source.type == ENDPOINT_V4L2 && events->apply_frame_format)
+    {
+        if (events->apply_frame_format->dwDefaultFrameInterval > 0)
+        {
+            fps = (int) 10000000 / events->apply_frame_format->dwDefaultFrameInterval;
+
+            parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            parm.parm.capture.timeperframe.numerator = 1000;
+            parm.parm.capture.timeperframe.denominator =
+                (uint32_t)(fps * parm.parm.capture.timeperframe.numerator);
+
+            printf("V4L2: Setting FPS: %d\n", fps);
+
+            if (ioctl(v4l2->fd, VIDIOC_S_PARM, &parm) < 0)
+            {
+                printf("V4L2: VIDIOC_S_PARM error: %s (%d)\n", strerror(errno), errno);
+            }
+        }
+    }
+}
+
 void v4l2_apply_format(struct processing *processing)
 {
     struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;
     struct events *events = &processing->events;
     struct v4l2_format fmt;
+    int video_format;
 
     if (processing->source.type == ENDPOINT_V4L2 && events->apply_frame_format)
     {
+        if (v4l2->jpeg_format_available &&
+            v4l2->jpeg_format_use &&
+            events->apply_frame_format->video_format == V4L2_PIX_FMT_MJPEG)
+        {
+            video_format = V4L2_PIX_FMT_JPEG;
+        }
+        else
+        {
+            video_format = events->apply_frame_format->video_format;
+        }
+
         memset(&fmt, 0, sizeof(struct v4l2_format));
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         fmt.fmt.pix.field = V4L2_FIELD_ANY;
         fmt.fmt.pix.width = events->apply_frame_format->wWidth;
         fmt.fmt.pix.height = events->apply_frame_format->wHeight;
-        fmt.fmt.pix.pixelformat = events->apply_frame_format->video_format;
+        fmt.fmt.pix.pixelformat = video_format;
         fmt.fmt.pix.sizeimage = fmt.fmt.pix.width * fmt.fmt.pix.height *
                                 ((fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) ? 2 : 1);
 
@@ -382,7 +567,8 @@ void v4l2_close(struct processing *processing)
 
 void v4l2_init(struct processing *processing,
                const char *device_name,
-               unsigned int nbufs)
+               unsigned int nbufs,
+               bool jpeg_format_use)
 {
     struct endpoint_v4l2 *v4l2 = &processing->source.v4l2;
     struct settings *settings = &processing->settings;
@@ -424,6 +610,8 @@ void v4l2_init(struct processing *processing,
         print_v4l2_capabilities("V4L2", cap.capabilities);
 
         v4l2->nbufs = nbufs;
+        v4l2->jpeg_format_use = jpeg_format_use;
+        v4l2->stream_on_count = 0;
         processing->source.type = ENDPOINT_V4L2;
         processing->source.state = true;
 
@@ -431,7 +619,24 @@ void v4l2_init(struct processing *processing,
         {
             v4l2_get_controls(processing);
         }
+
+        v4l2_parse_stored_controls(processing);
+        v4l2_init_stored_controls(processing);
+
         v4l2_get_available_formats(v4l2);
+
+        if (v4l2->jpeg_format_use)
+        {
+            if (v4l2->jpeg_format_available)
+            {
+                printf("V4L2: JPEG format required and available\n");
+            }
+            else
+            {
+                printf("V4L2: WARNING: JPEG format required but NOT available\n");
+            }
+        }
+
         return;
     }
 

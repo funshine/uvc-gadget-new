@@ -124,12 +124,6 @@ char *v4l2_control_name(unsigned int control)
     case V4L2_CID_COLORFX_CBCR:
         return "V4L2_CID_COLORFX_CBCR";
 
-    case V4L2_CID_CAMERA_CLASS_BASE:
-        return "V4L2_CID_CAMERA_CLASS_BASE";
-
-    case V4L2_CID_CAMERA_CLASS:
-        return "V4L2_CID_CAMERA_CLASS";
-
     case V4L2_CID_EXPOSURE_AUTO:
         return "V4L2_CID_EXPOSURE_AUTO";
 
@@ -219,6 +213,66 @@ char *v4l2_control_name(unsigned int control)
 
     case V4L2_LOCK_FOCUS:
         return "V4L2_LOCK_FOCUS";
+
+    case V4L2_CID_MPEG_STREAM_TYPE:
+        return "V4L2_CID_MPEG_STREAM_TYPE";
+
+    case V4L2_CID_MPEG_STREAM_PID_PMT:
+        return "V4L2_CID_MPEG_STREAM_PID_PMT";
+
+    case V4L2_CID_MPEG_STREAM_PID_AUDIO:
+        return "V4L2_CID_MPEG_STREAM_PID_AUDIO";
+
+    case V4L2_CID_MPEG_STREAM_PID_VIDEO:
+        return "V4L2_CID_MPEG_STREAM_PID_VIDEO";
+
+    case V4L2_CID_MPEG_STREAM_PID_PCR:
+        return "V4L2_CID_MPEG_STREAM_PID_PCR";
+
+    case V4L2_CID_MPEG_STREAM_PES_ID_AUDIO:
+        return "V4L2_CID_MPEG_STREAM_PES_ID_AUDIO";
+
+    case V4L2_CID_MPEG_STREAM_PES_ID_VIDEO:
+        return "V4L2_CID_MPEG_STREAM_PES_ID_VIDEO";
+
+    case V4L2_CID_MPEG_STREAM_VBI_FMT:
+        return "V4L2_CID_MPEG_STREAM_VBI_FMT";
+
+    case V4L2_CID_MPEG_VIDEO_ENCODING:
+        return "V4L2_CID_MPEG_VIDEO_ENCODING";
+
+    case V4L2_CID_MPEG_VIDEO_ASPECT:
+        return "V4L2_CID_MPEG_VIDEO_ASPECT";
+
+    case V4L2_CID_MPEG_VIDEO_B_FRAMES:
+        return "V4L2_CID_MPEG_VIDEO_B_FRAMES";
+
+    case V4L2_CID_MPEG_VIDEO_GOP_SIZE:
+        return "V4L2_CID_MPEG_VIDEO_GOP_SIZE";
+
+    case V4L2_CID_MPEG_VIDEO_GOP_CLOSURE:
+        return "V4L2_CID_MPEG_VIDEO_GOP_CLOSURE";
+
+    case V4L2_CID_MPEG_VIDEO_PULLDOWN:
+        return "V4L2_CID_MPEG_VIDEO_PULLDOWN";
+
+    case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
+        return "V4L2_CID_MPEG_VIDEO_BITRATE_MODE";
+
+    case V4L2_CID_MPEG_VIDEO_BITRATE:
+        return "V4L2_CID_MPEG_VIDEO_BITRATE";
+
+    case V4L2_CID_MPEG_VIDEO_BITRATE_PEAK:
+        return "V4L2_CID_MPEG_VIDEO_BITRATE_PEAK";
+
+    case V4L2_CID_MPEG_VIDEO_TEMPORAL_DECIMATION:
+        return "V4L2_CID_MPEG_VIDEO_TEMPORAL_DECIMATION";
+
+    case V4L2_CID_MPEG_VIDEO_MUTE:
+        return "V4L2_CID_MPEG_VIDEO_MUTE";
+
+    case V4L2_CID_MPEG_VIDEO_MUTE_YUV:
+        return "V4L2_CID_MPEG_VIDEO_MUTE_YUV";
 
     default:
         return "UNKNOWN";

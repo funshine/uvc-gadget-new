@@ -7,30 +7,37 @@
 
 static void image_uvc_video_process(struct processing *processing)
 {
-    struct endpoint_image *image = &processing->source.image;
+    struct data_buffers *data_buffers = &processing->data_buffers;
+    struct data_buffer *data_buffer = data_buffers->buffer_use;
     struct endpoint_uvc *uvc = &processing->target.uvc;
     struct settings *settings = &processing->settings;
     struct events *events = &processing->events;
-    struct v4l2_buffer uvc_buffer;
+    struct v4l2_buffer uvc_dequeue;
+    struct v4l2_buffer uvc_queue;
 
     if (!uvc->is_streaming || events->stream == STREAM_OFF)
     {
         return;
     }
 
-    memset(&uvc_buffer, 0, sizeof(struct v4l2_buffer));
-    uvc_buffer.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-    uvc_buffer.memory = V4L2_MEMORY_USERPTR;
-    if (ioctl(uvc->fd, VIDIOC_DQBUF, &uvc_buffer) < 0)
+    memset(&uvc_dequeue, 0, sizeof(struct v4l2_buffer));
+    uvc_dequeue.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+    uvc_dequeue.memory = V4L2_MEMORY_USERPTR;
+    if (ioctl(uvc->fd, VIDIOC_DQBUF, &uvc_dequeue) < 0)
     {
         printf("UVC: Unable to dequeue buffer: %s (%d).\n", strerror(errno), errno);
         return;
     }
 
-    memcpy(uvc->mem[uvc_buffer.index].start, image->data, image->size);
-    uvc_buffer.bytesused = image->size;
+    memset(&uvc_queue, 0, sizeof(struct v4l2_buffer));
+    uvc_queue.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+    uvc_queue.memory = V4L2_MEMORY_USERPTR;
+    uvc_queue.m.userptr = (unsigned long)data_buffer->start;
+    uvc_queue.length = data_buffer->length;
+    uvc_queue.index = uvc_dequeue.index;
+    uvc_queue.bytesused = data_buffer->bytesused;
 
-    if (ioctl(uvc->fd, VIDIOC_QBUF, &uvc_buffer) < 0)
+    if (ioctl(uvc->fd, VIDIOC_QBUF, &uvc_queue) < 0)
     {
         printf("UVC: Unable to queue buffer: %s (%d).\n", strerror(errno), errno);
         return;
@@ -53,7 +60,8 @@ void processing_loop_image_uvc(struct processing *processing)
     struct timeval tv;
     double next_frame_time = 0;
     double now;
-    double sleep_time;
+    double diff_time;
+    long sleep_time;
     fd_set fdsu, fdsi;
 
     printf("PROCESSING: IMAGE %s -> UVC %s\n", image->image_path, uvc->device_name);
@@ -69,13 +77,17 @@ void processing_loop_image_uvc(struct processing *processing)
         fd_set dfds = fdsu;
 
         now = processing_now();
-        sleep_time = next_frame_time - now;
-        if (sleep_time < 3)
-        {
-            sleep_time = 3;
-        }
+        diff_time = (next_frame_time - now);
 
-        nanosleep((const struct timespec[]){{0, 1000000L * (sleep_time - 2)}}, NULL);
+        if (diff_time > 0)
+        {
+            sleep_time = (long)(diff_time * 0.8);
+            if (sleep_time > 5)
+            {
+                sleep_time = 5;
+            }
+            nanosleep((const struct timespec[]){{0, sleep_time * 1000000L}}, NULL);
+        }
 
         tv.tv_sec = 1;
         tv.tv_usec = 0;
@@ -118,13 +130,11 @@ void processing_loop_image_uvc(struct processing *processing)
 
         if (FD_ISSET(uvc->fd, &dfds))
         {
-            if (!*(events->stopped))
+            now = processing_now();
+            if (!*(events->stopped) && now >= next_frame_time)
             {
-                if (now >= next_frame_time)
-                {
-                    image_uvc_video_process(processing);
-                    next_frame_time = now + settings->frame_interval;
-                }
+                image_uvc_video_process(processing);
+                next_frame_time = now + settings->frame_interval;
                 events->get_next_frame = false;
             }
         }

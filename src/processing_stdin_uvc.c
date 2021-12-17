@@ -4,18 +4,20 @@
 #include "uvc_events.h"
 #include "processing_actions.h"
 #include "stdin_endpoint.h"
+#include "data_buffers.h"
 
 static void stdin_uvc_video_process(struct processing *processing)
 {
     struct endpoint_stdin *stdin = &processing->source.stdin;
+    struct data_buffers *data_buffers = &processing->data_buffers;
+    struct data_buffer *data_buffer = data_buffers->buffer_use;
     struct endpoint_uvc *uvc = &processing->target.uvc;
     struct settings *settings = &processing->settings;
     struct events *events = &processing->events;
     struct v4l2_buffer uvc_dequeue;
     struct v4l2_buffer uvc_queue;
-    struct stdin_buffer *stdin_buffer = stdin->buffer_use;
 
-    if (!uvc->is_streaming || events->stream == STREAM_OFF || !stdin_buffer->filled)
+    if (!uvc->is_streaming || events->stream == STREAM_OFF || !data_buffer->filled)
     {
         return;
     }
@@ -32,10 +34,10 @@ static void stdin_uvc_video_process(struct processing *processing)
     memset(&uvc_queue, 0, sizeof(struct v4l2_buffer));
     uvc_queue.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     uvc_queue.memory = V4L2_MEMORY_USERPTR;
-    uvc_queue.m.userptr = (unsigned long)stdin_buffer->start;
-    uvc_queue.length = stdin_buffer->length;
+    uvc_queue.m.userptr = (unsigned long)data_buffer->start;
+    uvc_queue.length = data_buffer->length;
     uvc_queue.index = uvc_dequeue.index;
-    uvc_queue.bytesused = stdin_buffer->bytesused;
+    uvc_queue.bytesused = data_buffer->bytesused;
 
     if (ioctl(uvc->fd, VIDIOC_QBUF, &uvc_queue) < 0)
     {
@@ -43,8 +45,8 @@ static void stdin_uvc_video_process(struct processing *processing)
         return;
     }
 
-    stdin_buffer->filled = false;
-    stdin->fill_buffer = true;
+    data_buffer->filled = false;
+    data_buffers->fill_buffer = true;
 
     if (settings->show_fps)
     {
@@ -56,6 +58,7 @@ void processing_loop_stdin_uvc(struct processing *processing)
 {
     struct settings *settings = &processing->settings;
     struct endpoint_stdin *stdin = &processing->source.stdin;
+    struct data_buffers *data_buffers = &processing->data_buffers;
     struct endpoint_uvc *uvc = &processing->target.uvc;
     struct events *events = &processing->events;
 
@@ -63,6 +66,8 @@ void processing_loop_stdin_uvc(struct processing *processing)
     struct timeval tv;
     double next_frame_time = 0;
     double now;
+    double diff_time;
+    long sleep_time;
     fd_set fdsu;
 
     printf("PROCESSING: STDIN %c%c%c%c -> UVC %s\n",
@@ -78,7 +83,18 @@ void processing_loop_stdin_uvc(struct processing *processing)
         fd_set efds = fdsu;
         fd_set dfds = fdsu;
 
-        nanosleep((const struct timespec[]){{0, 1000000L}}, NULL);
+        now = processing_now();
+        diff_time = (next_frame_time - now);
+
+        if (diff_time > 0)
+        {
+            sleep_time = (long)(diff_time * 0.8);
+            if (sleep_time > 5)
+            {
+                sleep_time = 5;
+            }
+            nanosleep((const struct timespec[]){{0, sleep_time * 1000000L}}, NULL);
+        }
 
         tv.tv_sec = 1;
         tv.tv_usec = 0;
@@ -106,15 +122,14 @@ void processing_loop_stdin_uvc(struct processing *processing)
             uvc_events_process(processing);
         }
 
-        if (stdin->fill_buffer)
+        if (data_buffers->fill_buffer)
         {
             fill_buffer_from_stdin(processing);
         }
 
-        now = processing_now();
-
         if (FD_ISSET(uvc->fd, &dfds))
         {
+            now = processing_now();
             if (!*(events->stopped) && now >= next_frame_time)
             {
                 stdin_uvc_video_process(processing);
