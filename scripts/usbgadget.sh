@@ -14,7 +14,11 @@ PRODUCT="UVC Gadget"
 
 USBFILE=/home/root/usbstorage.img
 
-BOARD=$(strings /proc/device-tree/model)
+if test -f "/proc/device-tree/model"; then
+    BOARD=$(strings /proc/device-tree/model)
+else
+    BOARD="Unknown Board"
+fi
 
 case $BOARD in
     "Renesas Salvator-X board based on r8a7795 ES1.x")
