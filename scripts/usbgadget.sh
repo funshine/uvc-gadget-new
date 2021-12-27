@@ -241,7 +241,6 @@ create_rndis () {
     fi
 
     echo "**Please run ifconfig usb0 <ip> after rndis gadget created."
-    ifconfig usb0 "192.168.3.1"
     echo "OK"
 }
 
@@ -253,7 +252,6 @@ delete_rndis() {
     FUNCTION=$2
 
     echo "Deleting RNDIS gadget functionality : $FUNCTION"
-    ifconfig usb0 down
     rm -f os_desc/c.1
     rm -f $CONFIG/$FUNCTION
     rmdir functions/$FUNCTION
@@ -398,6 +396,18 @@ case "$1" in
         echo peripheral > $UDC_ROLE
         cat $UDC_ROLE
         echo "OK"
+
+        case "$2" in
+            rndis)
+                ip=192.168.3.1                                                                  
+                echo "**************************************"                                   
+                echo "Assigned static IP $ip to usb0"                                           
+                echo "**************************************"                                   
+                ifconfig usb0 $ip
+                ;;
+            *)
+                ;;
+        esac
         ;;
 
     stop)
@@ -412,6 +422,18 @@ case "$1" in
             exit 1;
         fi
 
+        case "$2" in
+            rndis)
+                ip=192.168.3.1                                                                  
+                echo "**************************************"                                   
+                echo "Bring down the interface usb0"                                           
+                echo "**************************************"                                   
+                ifconfig usb0 down
+                ;;
+            *)
+                ;;
+        esac
+        
         echo "Unbinding USB Device Controller"
         grep $UDC UDC && echo "" > UDC
         echo "OK"
