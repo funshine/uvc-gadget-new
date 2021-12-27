@@ -241,6 +241,7 @@ create_rndis () {
     fi
 
     echo "**Please run ifconfig usb0 <ip> after rndis gadget created."
+    ifconfig usb0 "192.168.3.1"
     echo "OK"
 }
 
@@ -252,6 +253,7 @@ delete_rndis() {
     FUNCTION=$2
 
     echo "Deleting RNDIS gadget functionality : $FUNCTION"
+    ifconfig usb0 down
     rm -f os_desc/c.1
     rm -f $CONFIG/$FUNCTION
     rmdir functions/$FUNCTION
@@ -356,10 +358,10 @@ case "$1" in
         #   * bit 6 set means the device is self-powered
         #   * bit 5 set means the device can wake the host from suspend
         #   * bits 4..0 are reserved and set to 0
-        echo 0xC0   > configs/c.1/bmAttributes
+        # echo 0xC0   > configs/c.1/bmAttributes
         # * MaxPower is the max current the device will draw (in mA)
-        # echo 500   > configs/c.1/MaxPower
-        echo "UVC" > configs/c.1/strings/0x409/configuration
+        echo 250   > configs/c.1/MaxPower
+        # echo "UVC" > configs/c.1/strings/0x409/configuration
 
         echo "Creating functions..."
         case "$2" in
